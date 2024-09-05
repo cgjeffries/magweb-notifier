@@ -1,0 +1,1 @@
+# magweb-notifier
