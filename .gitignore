@@ -6,3 +6,5 @@
 /venv-win
 /.idea
 /terraform/terraform.tfstate.backup
+**/.env
+/terraform/tfvars
