@@ -1,6 +1,8 @@
 import json
 import logging
 import traceback
+from datetime import datetime
+
 import requests
 import os
 logging.getLogger().setLevel(logging.INFO)
@@ -32,12 +34,15 @@ else:
     MAGWEB_USER = magweb_secret['username']
     MAGWEB_PASSWORD = magweb_secret['password']
 
-MAGWEB_ID = 'MW2098'
+MAGWEB_ID = os.environ['MAGWEB_ID']
+MAGWEB_NAME = os.environ['MAGWEB_NAME']
 
 s3 = boto3.client('s3')
 bucket_name = os.environ['MAGWEB_BUCKET_NAME']
 key = 'state.json'
 
+sns = boto3.client('sns')
+SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
 
 
 def get_state():
@@ -69,6 +74,10 @@ def lambda_handler(event, context):
         }
 
     data = result.json()
+
+    date_format = "%Y-%m-%d %H:%M:%S"
+    packet_datetime = datetime.strptime(data['packet_date_local'], date_format)
+
     ac_volts_in = int(data['i_ac_volts_in'])
     ac_power_on = ac_volts_in > 1 #ac power should be at least 110 volts
     logging.info(f'Current AC power state with volts {ac_volts_in}: {ac_power_on}')
@@ -77,11 +86,14 @@ def lambda_handler(event, context):
     logging.info(f'Previous AC power state: {previous_state}')
     if previous_state is not None:
         if previous_state['ac_power_on'] and not ac_power_on:
-            # TODO: state has changed from on to off, send notification
             logging.info("State has changed from on to off!")
+            logging.info(f"Sending SMS to {SNS_TOPIC_ARN}...")
+            response = sns.publish(TopicArn=SNS_TOPIC_ARN, Message=f"{MAGWEB_NAME} Reports AC power LOST at {packet_datetime.strftime('%m/%d/%Y %H:%M:%S')}. Battery Voltage: {data['i_dc_volts']}v")
         if not previous_state['ac_power_on'] and ac_power_on:
-            # TODO: send notification on power restored?
             logging.info("State has changed from off to on!")
+            logging.info(f"Sending SMS to {SNS_TOPIC_ARN}...")
+            response = sns.publish(TopicArn=SNS_TOPIC_ARN, Message=f"{MAGWEB_NAME} Reports AC power RESTORED at {packet_datetime.strftime('%m/%d/%Y %H:%M:%S')}. Battery Voltage: {data['i_dc_volts']}v")
+
 
     save_state({'ac_power_on': ac_power_on})
 

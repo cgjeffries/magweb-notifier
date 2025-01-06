@@ -9,15 +9,19 @@ module "magweb_notifier_lambda" {
   source_path = "../src/notify"
 
   attach_policies = true
-  number_of_policies = 2
+  number_of_policies = 3
   policies = [
     aws_iam_policy.lambda_s3_policy.arn,
-    aws_iam_policy.lambda_secrets_policy.arn
+    aws_iam_policy.lambda_secrets_policy.arn,
+    aws_iam_policy.lambda_sns_policy.arn
   ]
 
   environment_variables = {
     RUNNING_IN_AWS     = "True"
     MAGWEB_BUCKET_NAME = module.magweb_notifier_s3_bucket.s3_bucket_id
+    SNS_TOPIC_ARN      = aws_sns_topic.sms_notifications.arn
+    MAGWEB_NAME        = var.MAGWEB_NAME
+    MAGWEB_ID          = var.MAGWEB_ID
   }
 
   tags = {
