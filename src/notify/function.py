@@ -48,7 +48,7 @@ TWILIO_SID = os.environ['TWILIO_SID']
 twilio_client = Client(TWILIO_SID, TWILIO_TOKEN)
 
 TWILIO_FROM_NUMBER = twilio_client.incoming_phone_numbers.list(limit=1)[0].phone_number
-TO_NUMBERS = os.environ['TO_NUMBERS'].split(',')
+TO_NUMBERS = os.environ['PHONE_NUMBERS'].split(',')
 
 
 def get_state():

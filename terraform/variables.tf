@@ -11,7 +11,7 @@ variable "MAGWEB_NAME" {
   type = string
 }
 variable "PHONE_NUMBERS" {
-  type = list(string)
+  type = string
 }
 variable "TWILIO_SID" {
   type = string
