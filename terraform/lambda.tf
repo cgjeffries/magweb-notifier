@@ -8,7 +8,7 @@ module "magweb_notifier_lambda" {
 
   source_path = "../src/notify"
 
-  attach_policies = true
+  attach_policies    = true
   number_of_policies = 2
   policies = [
     aws_iam_policy.lambda_s3_policy.arn,

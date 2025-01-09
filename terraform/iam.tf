@@ -1,5 +1,5 @@
 resource "aws_iam_policy" "lambda_s3_policy" {
-  name   = "magweb-notifier-lambda-s3-access-policy"
+  name = "magweb-notifier-lambda-s3-access-policy"
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -20,7 +20,7 @@ resource "aws_iam_policy" "lambda_s3_policy" {
 }
 
 resource "aws_iam_policy" "lambda_secrets_policy" {
-  name   = "LambdaSecretsManagerPolicy"
+  name = "LambdaSecretsManagerPolicy"
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [

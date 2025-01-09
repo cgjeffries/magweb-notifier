@@ -5,10 +5,10 @@ from datetime import datetime
 
 import requests
 import os
+
 logging.getLogger().setLevel(logging.INFO)
 import boto3
 from twilio.rest import Client
-
 
 
 def get_secret(secret_name):
@@ -24,18 +24,11 @@ def get_secret(secret_name):
         print(f"Error retrieving secret: {e}")
         raise
 
-if not os.environ.get('RUNNING_IN_AWS'):
-    import dotenv
-    dotenv.load_dotenv()
-    MAGWEB_USER = os.environ['MAGWEB_USER']
-    MAGWEB_PASSWORD = os.environ['MAGWEB_PASSWORD']
-    TWILIO_TOKEN = os.environ['TWILIO_TOKEN']
 
-else:
-    magweb_secret = get_secret('magweb-notifier-creds')
-    MAGWEB_USER = magweb_secret['username']
-    MAGWEB_PASSWORD = magweb_secret['password']
-    TWILIO_TOKEN = magweb_secret['twilio_token']
+magweb_secret = get_secret('magweb-notifier-creds')
+MAGWEB_USER = magweb_secret['username']
+MAGWEB_PASSWORD = magweb_secret['password']
+TWILIO_TOKEN = magweb_secret['twilio_token']
 
 MAGWEB_ID = os.environ['MAGWEB_ID']
 MAGWEB_NAME = os.environ['MAGWEB_NAME']
@@ -58,8 +51,10 @@ def get_state():
     except s3.exceptions.NoSuchKey:
         return None  # State does not exist
 
+
 def save_state(new_state):
     s3.put_object(Bucket=bucket_name, Key=key, Body=json.dumps(new_state))
+
 
 def lambda_handler(event, context):
     form_data = {
@@ -85,7 +80,7 @@ def lambda_handler(event, context):
     packet_datetime = datetime.strptime(data['packet_date_local'], date_format)
 
     ac_volts_in = int(data['i_ac_volts_in'])
-    ac_power_on = ac_volts_in > 1 #ac power should be at least 110 volts
+    ac_power_on = ac_volts_in > 1  # ac power should be at least 110 volts
     logging.info(f'Current AC power state with volts {ac_volts_in}: {ac_power_on}')
 
     previous_state = get_state()
@@ -96,7 +91,7 @@ def lambda_handler(event, context):
             logging.info(f"Sending SMS to twilio...")
             for number in TO_NUMBERS:
                 message = twilio_client.messages.create(
-                    body = f"{MAGWEB_NAME} Reports AC power LOST at {packet_datetime.strftime('%m/%d/%Y %H:%M:%S')}. Battery Voltage: {data['i_dc_volts']}v",
+                    body=f"{MAGWEB_NAME} Reports AC power LOST at {packet_datetime.strftime('%m/%d/%Y %H:%M:%S')}. Battery Voltage: {data['i_dc_volts']}v",
                     from_=TWILIO_FROM_NUMBER,
                     to=number
                 )
@@ -110,14 +105,9 @@ def lambda_handler(event, context):
                     to=number
                 )
 
-
     save_state({'ac_power_on': ac_power_on})
 
     return {
         'statusCode': 200,
         'body': json.dumps('Lambda successful.')
     }
-
-if __name__ == '__main__':
-
-    lambda_handler(None, None)
