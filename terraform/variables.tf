@@ -13,3 +13,9 @@ variable "MAGWEB_NAME" {
 variable "PHONE_NUMBERS" {
   type = list(string)
 }
+variable "TWILIO_SID" {
+  type = string
+}
+variable "TWILIO_TOKEN" {
+  type = string
+}

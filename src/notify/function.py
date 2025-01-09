@@ -7,6 +7,7 @@ import requests
 import os
 logging.getLogger().setLevel(logging.INFO)
 import boto3
+from twilio.rest import Client
 
 
 
@@ -28,11 +29,13 @@ if not os.environ.get('RUNNING_IN_AWS'):
     dotenv.load_dotenv()
     MAGWEB_USER = os.environ['MAGWEB_USER']
     MAGWEB_PASSWORD = os.environ['MAGWEB_PASSWORD']
+    TWILIO_TOKEN = os.environ['TWILIO_TOKEN']
 
 else:
     magweb_secret = get_secret('magweb-notifier-creds')
     MAGWEB_USER = magweb_secret['username']
     MAGWEB_PASSWORD = magweb_secret['password']
+    TWILIO_TOKEN = magweb_secret['twilio_token']
 
 MAGWEB_ID = os.environ['MAGWEB_ID']
 MAGWEB_NAME = os.environ['MAGWEB_NAME']
@@ -41,8 +44,11 @@ s3 = boto3.client('s3')
 bucket_name = os.environ['MAGWEB_BUCKET_NAME']
 key = 'state.json'
 
-sns = boto3.client('sns')
-SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
+TWILIO_SID = os.environ['TWILIO_SID']
+twilio_client = Client(TWILIO_SID, TWILIO_TOKEN)
+
+TWILIO_FROM_NUMBER = twilio_client.incoming_phone_numbers.list(limit=1)[0].phone_number
+TO_NUMBERS = os.environ['TO_NUMBERS'].split(',')
 
 
 def get_state():
@@ -87,12 +93,22 @@ def lambda_handler(event, context):
     if previous_state is not None:
         if previous_state['ac_power_on'] and not ac_power_on:
             logging.info("State has changed from on to off!")
-            logging.info(f"Sending SMS to {SNS_TOPIC_ARN}...")
-            response = sns.publish(TopicArn=SNS_TOPIC_ARN, Message=f"{MAGWEB_NAME} Reports AC power LOST at {packet_datetime.strftime('%m/%d/%Y %H:%M:%S')}. Battery Voltage: {data['i_dc_volts']}v")
+            logging.info(f"Sending SMS to twilio...")
+            for number in TO_NUMBERS:
+                message = twilio_client.messages.create(
+                    body = f"{MAGWEB_NAME} Reports AC power LOST at {packet_datetime.strftime('%m/%d/%Y %H:%M:%S')}. Battery Voltage: {data['i_dc_volts']}v",
+                    from_=TWILIO_FROM_NUMBER,
+                    to=number
+                )
         if not previous_state['ac_power_on'] and ac_power_on:
             logging.info("State has changed from off to on!")
-            logging.info(f"Sending SMS to {SNS_TOPIC_ARN}...")
-            response = sns.publish(TopicArn=SNS_TOPIC_ARN, Message=f"{MAGWEB_NAME} Reports AC power RESTORED at {packet_datetime.strftime('%m/%d/%Y %H:%M:%S')}. Battery Voltage: {data['i_dc_volts']}v")
+            logging.info(f"Sending SMS to twilio...")
+            for number in TO_NUMBERS:
+                message = twilio_client.messages.create(
+                    body=f"{MAGWEB_NAME} Reports AC power RESTORED at {packet_datetime.strftime('%m/%d/%Y %H:%M:%S')}. Battery Voltage: {data['i_dc_volts']}v",
+                    from_=TWILIO_FROM_NUMBER,
+                    to=number
+                )
 
 
     save_state({'ac_power_on': ac_power_on})
