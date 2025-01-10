@@ -10,6 +10,7 @@ logging.getLogger().setLevel(logging.INFO)
 import boto3
 from twilio.rest import Client
 
+logging.getLogger('twilio.http_client').setLevel(logging.WARNING)
 
 def get_secret(secret_name):
     # Create a Secrets Manager client
@@ -80,8 +81,10 @@ def lambda_handler(event, context):
     packet_datetime = datetime.strptime(data['packet_date_local'], date_format)
 
     ac_volts_in = int(data['i_ac_volts_in'])
-    ac_power_on = ac_volts_in > 1  # ac power should be at least 110 volts
-    logging.info(f'Current AC power state with volts {ac_volts_in}: {ac_power_on}')
+    #ac_power_on = ac_volts_in > 1  # ac power should be at least 110 volts
+    inverter_status = data['i_status']
+    ac_power_on = inverter_status != "Inverting"
+    logging.info(f'Current AC power state with volts {ac_volts_in} and inverter status {inverter_status}: {ac_power_on}')
 
     previous_state = get_state()
     logging.info(f'Previous AC power state: {previous_state}')
